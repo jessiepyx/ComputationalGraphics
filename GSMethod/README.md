@@ -1,0 +1,2 @@
+- Language: C++14
+- IDE: CLion 2018.3

@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/alexis/Code/ComputationalGraphics/GSMethod/GaussSeidel.h
+iostream
+-
+MySparseMatrix.h
+/Users/alexis/Code/ComputationalGraphics/GSMethod/MySparseMatrix.h
+
+/Users/alexis/Code/ComputationalGraphics/GSMethod/MySparseMatrix.h
+iostream
+-
+vector
+-
+algorithm
+-
+
+/Users/alexis/Code/ComputationalGraphics/GSMethod/main.cpp
+iostream
+-
+GaussSeidel.h
+/Users/alexis/Code/ComputationalGraphics/GSMethod/GaussSeidel.h
+

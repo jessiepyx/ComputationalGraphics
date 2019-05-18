@@ -1,0 +1,2 @@
+- Python 3.6.8
+- Pytorch 0.4.1

@@ -1,0 +1,3 @@
+/Users/alexis/Code/ComputationalGraphics/Panorama/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/Users/alexis/Code/ComputationalGraphics/Panorama/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/alexis/Code/ComputationalGraphics/Panorama/cmake-build-debug/CMakeFiles/Panorama.dir
