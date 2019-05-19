@@ -267,5 +267,7 @@ CMakeFiles/Panorama.dir/my_pa.cpp.o: /usr/local/anaconda3/include/opencv2/videos
 CMakeFiles/Panorama.dir/my_pa.cpp.o: /usr/local/anaconda3/include/opencv2/videostab/ring_buffer.hpp
 CMakeFiles/Panorama.dir/my_pa.cpp.o: /usr/local/anaconda3/include/opencv2/videostab/stabilizer.hpp
 CMakeFiles/Panorama.dir/my_pa.cpp.o: /usr/local/anaconda3/include/opencv2/videostab/wobble_suppression.hpp
+CMakeFiles/Panorama.dir/my_pa.cpp.o: /usr/local/anaconda3/include/opencv2/xfeatures2d.hpp
 CMakeFiles/Panorama.dir/my_pa.cpp.o: /usr/local/anaconda3/include/opencv2/xfeatures2d/cuda.hpp
+CMakeFiles/Panorama.dir/my_pa.cpp.o: /usr/local/anaconda3/include/opencv2/xfeatures2d/nonfree.hpp
 

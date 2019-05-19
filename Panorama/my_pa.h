@@ -11,9 +11,19 @@
 #include "opencv2/opencv.hpp"
 #include "hw6_pa.h"
 
+using namespace std;
+using namespace cv;
+
 class Panoramaxxxx: public CylindricalPanorama {
 public:
-    bool makePanorama(std::vector<cv::Mat>& img_vec, cv::Mat& img_out, double f);
+    bool makePanorama(vector<Mat>& img_vec, Mat& img_out, double f);
+
+private:
+    Mat warpCylinder(Mat img, double r, double f);
+    double plane_to_cylinder_X(double x, double r, double f);
+    double plane_to_cylinder_Y(double x, double y, double r, double f);
+    double cylinder_to_plane_X(double x, double r, double f);
+    double cylinder_to_plane_Y(double x, double y, double r, double f);
 };
 
 #endif //PANORAMA_MY_PA_H
