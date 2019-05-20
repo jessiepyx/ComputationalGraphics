@@ -1,4 +1,4 @@
-/*
+/**
  * @file my_pa.h
  * @author Jessie Peng
  */
@@ -24,6 +24,7 @@ private:
     double plane_to_cylinder_Y(double x, double y, double r, double f);
     double cylinder_to_plane_X(double x, double r, double f);
     double cylinder_to_plane_Y(double x, double y, double r, double f);
+    void stitchTwoImages(Mat& src, Mat& dst, Mat& out);
 };
 
 #endif //PANORAMA_MY_PA_H
