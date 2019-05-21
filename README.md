@@ -20,3 +20,9 @@ Sample code showing how to use deep learning to recover images. Provided by TA a
 ## ImageColorization
 [Lab 5 - Image Colorization with Deep Learning](http://www.cad.zju.edu.cn/home/gfzhang/course/computational-photography/lab5-deep-learning/deep-learning.html)
 - Train neural networks for colorizing gray images
+## Panorama
+[Lab 6 - Panorama Stitching](http://www.cad.zju.edu.cn/home/gfzhang/course/computational-photography/lab6-panorama/panorama.html)  
+[Image Alignment and Stitching: A Tutorial](https://www.microsoft.com/en-us/research/wp-content/uploads/2004/10/tr-2004-92.pdf)
+- Warp the images into cylindrical coordinates
+- Register the images based on features (SIFT Algorithm)
+- Composite the images into a panorama
