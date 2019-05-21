@@ -20,7 +20,6 @@ public:
 
 private:
     Mat warpCylinder(Mat& img, double r, double f);
-    Mat warpPlane(Mat& img, double r, double f);
     double plane_to_cylinder_X(double x, double r, double f);
     double plane_to_cylinder_Y(double x, double y, double r, double f);
     double cylinder_to_plane_X(double x, double r, double f);

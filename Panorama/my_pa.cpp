@@ -101,11 +101,6 @@ Mat Panoramaxxxx::warpCylinder(Mat& img, double r, double f)
     return img_ret;
 }
 
-Mat Panoramaxxxx::warpPlane(Mat& img, double r, double f)
-{
-    return img;
-}
-
 double Panoramaxxxx::plane_to_cylinder_X(double x, double r, double f)
 {
     return r * atan(x / f);
@@ -171,7 +166,7 @@ void Panoramaxxxx::registerImage(Mat& src, Mat& dst, Mat& out, Mat& src_mask, Ma
 
     vector<DMatch> matches;
     vector<DMatch> good_matches;
-    vector<DMatch> inline_matches;
+    vector<DMatch> inlier_matches;
 
     Mat img_match;
     int good_match_size = 500;
@@ -211,42 +206,44 @@ void Panoramaxxxx::registerImage(Mat& src, Mat& dst, Mat& out, Mat& src_mask, Ma
         dst_float.push_back(keypoint_dst[it->queryIdx].pt);
     }
 
-    vector<uchar> is_inliners(good_match_size);
-    Mat homography = findHomography(src_float, dst_float, CV_RANSAC, 3, is_inliners);
+    vector<uchar> is_inliers(good_match_size);
+    Mat homography = findHomography(src_float, dst_float, CV_RANSAC, 3, is_inliers);
 
-    for (int i = 0; i < is_inliners.size(); i++)
+    for (int i = 0; i < is_inliers.size(); i++)
     {
-        if (is_inliners[i])
+        if (is_inliers[i])
         {
-            inline_matches.push_back(good_matches[i]);
+            inlier_matches.push_back(good_matches[i]);
         }
     }
 
-//    drawMatches(dst, keypoint_dst, src, keypoint_src, inline_matches, img_match);
-//    imshow("inline matches", img_match);
+//    drawMatches(dst, keypoint_dst, src, keypoint_src, inlier_matches, img_match);
+//    imshow("inlier matches", img_match);
 //    waitKey(0);
 //    destroyAllWindows();
+
+    src_float.clear();
+    dst_float.clear();
+    for (auto it = inlier_matches.begin(); it != inlier_matches.end(); it++)
+    {
+        src_float.push_back(keypoint_src[it->trainIdx].pt);
+        dst_float.push_back(keypoint_dst[it->queryIdx].pt);
+    }
+
+    homography = findHomography(src_float, dst_float, CV_RANSAC);
 
     /** Step 3
      *  Register images
      */
     warpPerspective(src, out, homography, out.size(), INTER_NEAREST);
     warpPerspective(src_mask, out_mask, homography, out.size(), INTER_NEAREST);
-
-    // image corners
-//    std::vector<Point2f> ori_corners(4), corners(4);
-//    ori_corners[0] = cvPoint(0, 0);
-//    ori_corners[1] = cvPoint(0, src.rows);
-//    ori_corners[2] = cvPoint(src.cols, src.rows);
-//    ori_corners[3] = cvPoint(src.cols, 0);
-//
-//    perspectiveTransform(ori_corners, corners, homography);
 }
 
 void Panoramaxxxx::blendImage(vector<Mat>& img_vec, Mat& img_out, vector<Mat>& mask)
 {
     vector<Vec3f> candidates;
     Vec3f sum, average;
+
     for (int i = 0; i < img_out.rows; i++)
     {
         for (int j = 0; j < img_out.cols; j++)
@@ -268,7 +265,7 @@ void Panoramaxxxx::blendImage(vector<Mat>& img_vec, Mat& img_out, vector<Mat>& m
             {
                 average = sum / cand_num;
 
-                /// get rid of the noise
+                /// get rid of noise
                 if (cand_num > 2)
                 {
                     double dist[cand_num];
@@ -290,7 +287,7 @@ void Panoramaxxxx::blendImage(vector<Mat>& img_vec, Mat& img_out, vector<Mat>& m
                         sum_dist += dist[k];
                     }
 
-                    if (max_dist > 20 && max_dist > sum_dist / cand_num * 1.5)
+                    if (max_dist > 20 && max_dist > sum_dist / cand_num * 1.5) // filter out noise
                     {
                         sum -= candidates[max_idx];
                         average = sum / (cand_num - 1);

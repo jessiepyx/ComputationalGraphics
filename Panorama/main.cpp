@@ -12,11 +12,10 @@
 #include "my_pa.h"
 
 #define DEFAULT_FOCAL_LENGTH 512.89
+#define TEST_NO 1
 
 using namespace std;
 using namespace cv;
-
-#define TEST_NO 2
 
 int main()
 {
@@ -75,7 +74,7 @@ int main()
     imshow("panorama " + to_string(TEST_NO), img_out);
     waitKey(0);
     destroyAllWindows();
-    imwrite("./panorama_" + to_string(TEST_NO) + ".png", img_out);
+//    imwrite("./panorama_" + to_string(TEST_NO) + ".png", img_out);
 
     return 0;
 }
