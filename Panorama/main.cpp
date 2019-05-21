@@ -64,7 +64,7 @@ int main()
     }
 
     // estimate the size of stitched image
-    Mat img_out = Mat::zeros(img_vec[0].rows * (1 + n * 0.02), img_vec[0].cols * (1 + n * 0.15), CV_8UC3);
+    Mat img_out = Mat::zeros(img_vec[0].rows * (1 + n * 0.05), img_vec[0].cols * (1 + n * 0.15), CV_8UC3);
 
     /// make panorama
     Panoramaxxxx pm;

@@ -19,12 +19,20 @@ public:
     bool makePanorama(vector<Mat>& img_vec, Mat& img_out, double f);
 
 private:
-    Mat warpCylinder(Mat img, double r, double f);
+    Mat warpCylinder(Mat& img, double r, double f);
+    Mat warpPlane(Mat& img, double r, double f);
     double plane_to_cylinder_X(double x, double r, double f);
     double plane_to_cylinder_Y(double x, double y, double r, double f);
     double cylinder_to_plane_X(double x, double r, double f);
     double cylinder_to_plane_Y(double x, double y, double r, double f);
-    void stitchTwoImages(Mat& src, Mat& dst, Mat& out);
+    void registerImage(Mat& src, Mat& dst, Mat& out, Mat& src_mask, Mat& out_mask);
+    void blendImage(vector<Mat>& img_vec, Mat& img_out, vector<Mat>& mask);
+
+    int n; // number of input images
+    vector<Mat> img_cylinder; // input images in cylindrical coordinates
+    Mat mask_cylinder;
+    vector<Mat> img_rectified; // images after transformation according to homography
+    vector<Mat> mask_rectified;
 };
 
 #endif //PANORAMA_MY_PA_H

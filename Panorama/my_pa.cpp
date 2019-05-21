@@ -14,46 +14,65 @@ using namespace cv;
 
 bool Panoramaxxxx::makePanorama(vector<Mat>& img_vec, Mat& img_out, double f)
 {
-    int n = img_vec.size();
+    n = img_vec.size();
     if (n <= 0)
     {
         return false;
     }
 
-    /** Warp the images into cylindrical coordinates */
-    vector<Mat> img_cylinder;
+    /** Part 1
+     *  Warp the images into cylindrical coordinates
+     */
     for (auto img : img_vec)
     {
         img_cylinder.push_back(warpCylinder(img, f, f)); // set r = f
     }
 
+    Mat blank = Mat::ones(img_vec[0].size(), CV_8UC3);
+    blank *= 255;
+    mask_cylinder = warpCylinder(blank, f, f);
 
-    /** Stitch images */
-    int start = n / 2; // start from the middle
-    Mat img_start = img_cylinder[start];
-    img_start.copyTo(img_out(
-            Rect((img_out.cols - img_start.cols) / 2, img_out.rows - img_start.rows, img_start.cols, img_start.rows)
-            )); // copy first image to the lower middle
-
-    Mat img_dst = Mat::zeros(img_out.size(), CV_8UC3);
-    img_start.copyTo(img_dst(
-            Rect((img_out.cols - img_start.cols) / 2, img_out.rows - img_start.rows, img_start.cols, img_start.rows)
-            ));
-    for (int i = start + 1; i < n; i++) // to right
+    /** Part 2
+     *  Image registration
+     */
+    for (int i = 0; i < n; i++)
     {
-        stitchTwoImages(img_cylinder[i], img_dst, img_out);
+        img_rectified.push_back(Mat::zeros(img_out.size(), CV_8UC3));
+        mask_rectified.push_back(Mat::zeros(img_out.size(), CV_8UC3));
     }
 
-    img_start.copyTo(img_dst(Rect((img_out.cols - img_start.cols) / 2, img_out.rows - img_start.rows, img_start.cols, img_start.rows)));
-    for (int i = start - 1; i >= 0; i--) // to left
+    /** take the middle image as reference */
+    int ref = n / 2;
+    Mat img_ref = img_cylinder[ref];
+    img_ref.copyTo(img_rectified[ref](Rect(
+            (img_out.cols - img_ref.cols) / 2, (img_out.rows - img_ref.rows) / 2, img_ref.cols, img_ref.rows
+            ))); // put the reference image in the center
+
+    mask_cylinder.copyTo(mask_rectified[ref](Rect(
+            (img_out.cols - img_ref.cols) / 2, (img_out.rows - img_ref.rows) / 2, img_ref.cols, img_ref.rows
+    )));
+
+    /** register images on the right side */
+    for (int i = ref; i < n - 1; i++)
     {
-        stitchTwoImages(img_cylinder[i], img_dst, img_out);
+        registerImage(img_cylinder[i+1], img_rectified[i], img_rectified[i+1], mask_cylinder, mask_rectified[i+1]);
     }
+
+    /** register images on the left side */
+    for (int i = ref; i >= 1; i--)
+    {
+        registerImage(img_cylinder[i-1], img_rectified[i], img_rectified[i-1], mask_cylinder, mask_rectified[i-1]);
+    }
+
+    /** Part 3
+     *  Image blending
+     */
+    blendImage(img_rectified, img_out, mask_rectified);
 
     return true;
 }
 
-Mat Panoramaxxxx::warpCylinder(Mat img, double r, double f)
+Mat Panoramaxxxx::warpCylinder(Mat& img, double r, double f)
 {
     int x_range = (img.cols - 1) / 2;
     int y_range = (img.rows - 1) / 2;
@@ -82,6 +101,11 @@ Mat Panoramaxxxx::warpCylinder(Mat img, double r, double f)
     return img_ret;
 }
 
+Mat Panoramaxxxx::warpPlane(Mat& img, double r, double f)
+{
+    return img;
+}
+
 double Panoramaxxxx::plane_to_cylinder_X(double x, double r, double f)
 {
     return r * atan(x / f);
@@ -102,10 +126,11 @@ double Panoramaxxxx::cylinder_to_plane_Y(double x, double yy, double r, double f
     return yy / r * sqrt(x * x + f * f);
 }
 
-void Panoramaxxxx::stitchTwoImages(Mat& src, Mat& dst, Mat& out)
+void Panoramaxxxx::registerImage(Mat& src, Mat& dst, Mat& out, Mat& src_mask, Mat& out_mask)
 {
-    /** Step 1: Detect features*/
-
+    /** Step 1
+     *  Detect features
+     */
     // note the OpenCV 3.X standard
     Ptr<xfeatures2d::SiftFeatureDetector> detector = xfeatures2d::SiftFeatureDetector::create();
     Ptr<xfeatures2d::SiftDescriptorExtractor> extractor = xfeatures2d::SiftDescriptorExtractor::create();
@@ -114,7 +139,7 @@ void Panoramaxxxx::stitchTwoImages(Mat& src, Mat& dst, Mat& out)
     Mat img_keypoint_src, img_keypoint_dst;
     Mat descriptor_src, descriptor_dst;
 
-    /// Detect keypoints with SIFT
+    /** 1.1 Detect keypoints with SIFT */
     detector->detect(src, keypoint_src);
 
 //    drawKeypoints(src, keypoint_src, img_keypoint_src);
@@ -127,7 +152,7 @@ void Panoramaxxxx::stitchTwoImages(Mat& src, Mat& dst, Mat& out)
 //    imshow("keypoints in dst", img_keypoint_dst);
 //    waitKey(0);
 
-    /// Extract descriptors
+    /** 1.2 Extract descriptors */
     extractor->compute(src, keypoint_src, descriptor_src);
 
 //    imshow("descriptors in src", descriptor_src);
@@ -139,17 +164,19 @@ void Panoramaxxxx::stitchTwoImages(Mat& src, Mat& dst, Mat& out)
 //    waitKey(0);
 //    destroyAllWindows();
 
-    /** Step 2: Match features*/
-
+    /** Step 2
+     *  Match features
+     */
     Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce");
 
     vector<DMatch> matches;
     vector<DMatch> good_matches;
     vector<DMatch> inline_matches;
+
     Mat img_match;
     int good_match_size = 500;
 
-    /// Compute all feature correspondences with brute force
+    /** 2.1 Compute all correspondences with brute force */
     matcher->match(descriptor_dst, descriptor_src, matches);
 
 //    drawMatches(dst, keypoint_dst, src, keypoint_src, matches, img_match);
@@ -157,18 +184,18 @@ void Panoramaxxxx::stitchTwoImages(Mat& src, Mat& dst, Mat& out)
 //    waitKey(0);
 //    destroyAllWindows();
 
-    /// Keep the top 500 matches
+    /** 2.2 Keep the top 500 matches */
     Mat dist = Mat::zeros(matches.size(), 1, CV_32F);
-    Mat sorted_ind;
+    Mat sorted_idx;
     for (int i = 0; i < matches.size(); i++)
     {
         dist.at<float>(i, 0) = matches[i].distance;
     }
-    sortIdx(dist, sorted_ind, SORT_EVERY_COLUMN + SORT_ASCENDING);
+    sortIdx(dist, sorted_idx, SORT_EVERY_COLUMN + SORT_ASCENDING);
 
     for (int i = 0; i < good_match_size; i++)
     {
-        good_matches.push_back(matches[sorted_ind.at<int>(i, 0)]);
+        good_matches.push_back(matches[sorted_idx.at<int>(i, 0)]);
     }
 
 //    drawMatches(dst, keypoint_dst, src, keypoint_src, good_matches, img_match);
@@ -176,7 +203,7 @@ void Panoramaxxxx::stitchTwoImages(Mat& src, Mat& dst, Mat& out)
 //    waitKey(0);
 //    destroyAllWindows();
 
-    /// Eliminate outliers with RANSAC
+    /** 2.3 Eliminate outliers with RANSAC */
     vector<Point2f> src_float, dst_float;
     for (auto it = good_matches.begin(); it != good_matches.end(); it++)
     {
@@ -200,28 +227,82 @@ void Panoramaxxxx::stitchTwoImages(Mat& src, Mat& dst, Mat& out)
 //    waitKey(0);
 //    destroyAllWindows();
 
-    /** Step 3: Register images */
+    /** Step 3
+     *  Register images
+     */
+    warpPerspective(src, out, homography, out.size(), INTER_NEAREST);
+    warpPerspective(src_mask, out_mask, homography, out.size(), INTER_NEAREST);
 
-    Mat src_pers(dst.size(), CV_8UC3);
-    warpPerspective(src, src_pers, homography, dst.size());
+    // image corners
+//    std::vector<Point2f> ori_corners(4), corners(4);
+//    ori_corners[0] = cvPoint(0, 0);
+//    ori_corners[1] = cvPoint(0, src.rows);
+//    ori_corners[2] = cvPoint(src.cols, src.rows);
+//    ori_corners[3] = cvPoint(src.cols, 0);
+//
+//    perspectiveTransform(ori_corners, corners, homography);
+}
 
-    /** Step 4: Blend images */
-    for (int j = 0; j < dst.rows; j++)
+void Panoramaxxxx::blendImage(vector<Mat>& img_vec, Mat& img_out, vector<Mat>& mask)
+{
+    vector<Vec3f> candidates;
+    Vec3f sum, average;
+    for (int i = 0; i < img_out.rows; i++)
     {
-        for (int i = 0; i < dst.cols; i++)
+        for (int j = 0; j < img_out.cols; j++)
         {
-            if (norm(out.at<Vec3b>(j, i)) == 0)
+            candidates.clear();
+            sum = Vec3b(0, 0, 0);
+            for (auto img : img_vec)
             {
-                out.at<Vec3b>(j, i) = src_pers.at<Vec3b>(j, i);
+                Vec3b tmp = img.at<Vec3b>(i, j);
+                if (norm(tmp, NORM_L1) > 0)
+                {
+                    candidates.push_back(tmp);
+                    sum += tmp;
+                }
+            }
+
+            int cand_num = candidates.size();
+            if (cand_num > 1)
+            {
+                average = sum / cand_num;
+
+                /// get rid of the noise
+                if (cand_num > 2)
+                {
+                    double dist[cand_num];
+                    for (int k = 0; k < cand_num; k++)
+                    {
+                        dist[k] = norm(candidates[k] - average, NORM_L2);
+                    }
+
+                    double max_dist = dist[0];
+                    int max_idx = 0;
+                    double sum_dist = dist[0];
+                    for (int k = 1; k < cand_num; k++)
+                    {
+                        if (dist[k] > max_dist)
+                        {
+                            max_dist = dist[k];
+                            max_idx = k;
+                        }
+                        sum_dist += dist[k];
+                    }
+
+                    if (max_dist > 20 && max_dist > sum_dist / cand_num * 1.5)
+                    {
+                        sum -= candidates[max_idx];
+                        average = sum / (cand_num - 1);
+                    }
+                }
+
+                img_out.at<Vec3b>(i, j) = average;
+            }
+            else if (cand_num == 1)
+            {
+                img_out.at<Vec3b>(i, j) = candidates[0];
             }
         }
     }
-
-    /** Step 5: Warp the stitched image into plane coordinates */
-
-//    imshow("stitched", out);
-//    waitKey(0);
-//    destroyAllWindows();
-
-    dst = src_pers;
 }
