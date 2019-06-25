@@ -12,7 +12,7 @@
 Build project *vuforia/samples/VuforiaSamples-8-3-8* with Android Studio
 
 - Target images can be downloaded from [Vuforia Website](https://library.vuforia.com/content/vuforia-library/en/articles/Solution/sample-apps-target-pdfs.html)
-- *src/main/assets/ObjectRecognition* contains my object data *joy_OT.xml* and *OR_about.html*
+- *src/main/assets/ObjectRecognition* contains my object data *joy_OT.xml* and *joy_OT.dat*
 - Change the lisence in *src/main/java/com/vuforia/engine/SampleApplicationSession.java* (the last argument of the following function) to your own
 
 ```
